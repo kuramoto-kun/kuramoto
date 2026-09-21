@@ -245,13 +245,28 @@ def run_screening():
         return
 
     df_res = pd.DataFrame(results)
-    df_res = df_res.sort_values(by="probability", ascending=False).reset_index(drop=True)
-    top5 = df_res.head(5)
 
-    msg = "【📈 AI株価予測 朝のスクリーニング結果（200銘柄版）】\n"
-    msg += "本日の全市場上昇確率上位TOP5をお届けします。\n\n"
+    # ランキング1: 単純に上昇確率が高い順 TOP5
+    top5_prob = df_res.sort_values(by="probability", ascending=False).head(5)
 
-    for i, row in top5.iterrows():
+    # ランキング2: 上昇確率60%以上の中で、予測上昇幅が大きい順 TOP5
+    df_filtered = df_res[df_res["probability"] >= 0.60].copy()
+    if df_filtered.empty:
+        df_filtered = df_res.copy()
+    top5_return = df_filtered.sort_values(by="predicted_return", ascending=False).head(5)
+
+    # メッセージの組み立て
+    msg = "【📈 AI株価予測 朝のスクリーニング結果（200銘柄）】\n\n"
+
+    msg += "【🎯 上昇確率が高い順 TOP5】\n"
+    for i, row in top5_prob.reset_index(drop=True).iterrows():
+        msg += f"■ {i+1}. {row['name']} ({row['ticker']})\n"
+        msg += f"・現在値: {row['current_price']:,.1f} 円\n"
+        msg += f"・5日後予測: {row['predicted_price']:,.1f} 円 ({row['predicted_return']*100:+.2f}%)\n"
+        msg += f"・上昇確率: {row['probability']*100:.1f} %\n\n"
+
+    msg += "【🚀 予測上昇幅が大きい順（確率60%以上）TOP5】\n"
+    for i, row in top5_return.reset_index(drop=True).iterrows():
         msg += f"■ {i+1}. {row['name']} ({row['ticker']})\n"
         msg += f"・現在値: {row['current_price']:,.1f} 円\n"
         msg += f"・5日後予測: {row['predicted_price']:,.1f} 円 ({row['predicted_return']*100:+.2f}%)\n"

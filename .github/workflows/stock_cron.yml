@@ -21,7 +21,7 @@ jobs:
       - name: Install dependencies
         run: |
           pip install --upgrade pip
-          pip install requests pandas numpy yfinance lightgbm
+          pip install requests pandas numpy yfinance lightgbm scikit-learn
 
       - name: Run screening script
         env:

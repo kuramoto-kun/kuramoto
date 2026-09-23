@@ -223,46 +223,90 @@ def update_and_append_log(top5_prob, top5_return):
     today_str = datetime.now().strftime("%Y-%m-%d")
     today_dt = datetime.strptime(today_str, "%Y-%m-%d")
 
+    expected_columns = ["Date", "Ticker", "Name", "Condition", "EntryPrice", "TargetReturn5d", "ActualReturn5d", "Status"]
+
     # 1. 既存ログの読み込みと勝敗判定（Openのものをチェック）
     if os.path.exists(log_file):
         try:
             df_log = pd.read_csv(log_file)
+            for col in expected_columns:
+                if col not in df_log.columns:
+                    df_log[col] = ""
         except Exception:
-            df_log = pd.DataFrame(columns=["Date", "Ticker", "Name", "Condition", "EntryPrice", "TargetReturn5d", "ActualReturn5d", "Status"])
+            df_log = pd.DataFrame(columns=expected_columns)
     else:
-        df_log = pd.DataFrame(columns=["Date", "Ticker", "Name", "Condition", "EntryPrice", "TargetReturn5d", "ActualReturn5d", "Status"])
+        df_log = pd.DataFrame(columns=expected_columns)
 
+    print(f"--- 既存ログの勝敗判定チェック開始 (全 {len(df_log)} 行) ---")
+    
     # ステータスがOpenの行について、5営業日以上経過していれば実績株価を取得して判定
     for idx, row in df_log.iterrows():
-        if row["Status"] == "Open":
+        if str(row["Status"]) == "Open":
             entry_date_str = str(row["Date"])
-            entry_dt = datetime.strptime(entry_date_str, "%Y-%m-%d")
-            
-            # エントリーから5営業日（または約7〜10カレンダー日以上）経過しているか確認
-            if (today_dt - entry_dt).days >= 7:
-                ticker = row["Ticker"]
-                entry_price = float(row["EntryPrice"])
-                
-                # yfinanceで過去から現在までのデータを取得して、エントリー日の5日後（または直近）の終値を取得
-                hist = yf.download(ticker, start=entry_date_str, auto_adjust=True, progress=False)
-                if isinstance(hist.columns, pd.MultiIndex):
-                    hist.columns = hist.columns.get_level_values(0)
-                
-                if len(hist) >= 6:
-                    # 5営業日目の終値を取得
-                    exit_price = float(hist["Close"].iloc[5])
-                    actual_return = (exit_price - entry_price) / entry_price
-                    
-                    df_log.loc[idx, "ActualReturn5d"] = round(actual_return, 4)
-                    # 実際のパフォーマンスがプラスならWin、マイナスならLose
-                    df_log.loc[idx, "Status"] = "Win" if actual_return > 0 else "Lose"
-                elif (today_dt - entry_dt).days >= 14:
-                    # データが取れない等の例外で2週間以上経過している場合はClosed扱いに
-                    df_log.loc[idx, "Status"] = "Closed"
+            print(f"チェック対象: Ticker={row['Ticker']}, Date={entry_date_str}")
+            try:
+                entry_dt = datetime.strptime(entry_date_str, "%Y-%m-%d")
+                days_passed = (today_dt - entry_dt).days
+                print(f" -> 経過日数: {days_passed}日")
 
-    # 2. 本日の新規データを追加（条件A: Probability_TOP5 ＆ 条件B: Return_TOP5_Prob60）
+                if days_passed >= 7:
+                    ticker = row["Ticker"]
+                    entry_price = float(row["EntryPrice"])
+                    
+                    hist = yf.download(ticker, start=entry_date_str, auto_adjust=True, progress=False)
+                    if isinstance(hist.columns, pd.MultiIndex):
+                        hist.columns = hist.columns.get_level_values(0)
+                    
+                    print(f" -> 取得できた株価データ数: {len(hist)} 行")
+                    # 変更前：if len(hist) >= 6:
+                    # 変更後：
+                    if len(hist) >= 5:
+                        exit_page_idx = 4 if len(hist) == 5 else 5
+                        exit_price = float(hist["Close"].iloc[exit_page_idx])
+                        actual_return = (exit_price - entry_price) / entry_price
+                        
+                        df_log.loc[idx, "ActualReturn5d"] = round(actual_return, 4)
+                        df_log.loc[idx, "Status"] = "Win" if actual_return > 0 else "Lose"
+                        print(f" ==> 判定完了！ Status: {df_log.loc[idx, 'Status']} (ActualReturn: {actual_return:.4f})")
+                    else:
+                        print(" ==> 5営業日分のデータがまだ揃っていません。")
+                else:
+                    print(" ==> 経過日数が7日未満のためスキップします。")
+            except Exception as e:
+                print(f" ==> エラー発生: {e}")
+
+    # 2. 本日の新規データを追加
     new_logs = []
+    for _, row in top5_prob.reset_index(drop=True).iterrows():
+        new_logs.append({
+            "Date": today_str,
+            "Ticker": row["ticker"],
+            "Name": row["name"],
+            "Condition": "Probability_TOP5",
+            "EntryPrice": row["current_price"],
+            "TargetReturn5d": round(row["predicted_return"], 4),
+            "ActualReturn5d": "",
+            "Status": "Open"
+        })
+
+    for _, row in top5_return.reset_index(drop=True).iterrows():
+        new_logs.append({
+            "Date": today_str,
+            "Ticker": row["ticker"],
+            "Name": row["name"],
+            "Condition": "Return_TOP5_Prob60",
+            "EntryPrice": row["current_price"],
+            "TargetReturn5d": round(row["predicted_return"], 4),
+            "ActualReturn5d": "",
+            "Status": "Open"
+        })
+
+    df_new = pd.DataFrame(new_logs)
+    df_log = df_log[df_log["Date"] != today_str]
+    df_combined = pd.concat([df_log, df_new], ignore_index=True)
     
+    df_combined.to_csv(log_file, index=False)
+    print("forward_test_log.csv の保存が完了しました！")
     # 条件Aの追加
     for _, row in top5_prob.reset_index(drop=True).iterrows():
         new_logs.append({

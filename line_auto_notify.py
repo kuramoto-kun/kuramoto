@@ -4,7 +4,7 @@ import pandas as pd
 import numpy as np
 import yfinance as yf
 import lightgbm as lgb
-from datetime import datetime
+from datetime import datetime, timedelta
 
 # --- 設定値（GitHubのSecretsから環境変数として安全に読み込みます） ---
 LINE_ACCESS_TOKEN = os.getenv("LINE_ACCESS_TOKEN")
@@ -218,6 +218,86 @@ def send_line_message(message):
     else:
         print(f"通知失敗: {response.status_code}, {response.text}")
 
+def update_and_append_log(top5_prob, top5_return):
+    log_file = "forward_test_log.csv"
+    today_str = datetime.now().strftime("%Y-%m-%d")
+    today_dt = datetime.strptime(today_str, "%Y-%m-%d")
+
+    # 1. 既存ログの読み込みと勝敗判定（Openのものをチェック）
+    if os.path.exists(log_file):
+        try:
+            df_log = pd.read_csv(log_file)
+        except Exception:
+            df_log = pd.DataFrame(columns=["Date", "Ticker", "Name", "Condition", "EntryPrice", "TargetReturn5d", "ActualReturn5d", "Status"])
+    else:
+        df_log = pd.DataFrame(columns=["Date", "Ticker", "Name", "Condition", "EntryPrice", "TargetReturn5d", "ActualReturn5d", "Status"])
+
+    # ステータスがOpenの行について、5営業日以上経過していれば実績株価を取得して判定
+    for idx, row in df_log.iterrows():
+        if row["Status"] == "Open":
+            entry_date_str = str(row["Date"])
+            entry_dt = datetime.strptime(entry_date_str, "%Y-%m-%d")
+            
+            # エントリーから5営業日（または約7〜10カレンダー日以上）経過しているか確認
+            if (today_dt - entry_dt).days >= 7:
+                ticker = row["Ticker"]
+                entry_price = float(row["EntryPrice"])
+                
+                # yfinanceで過去から現在までのデータを取得して、エントリー日の5日後（または直近）の終値を取得
+                hist = yf.download(ticker, start=entry_date_str, auto_adjust=True, progress=False)
+                if isinstance(hist.columns, pd.MultiIndex):
+                    hist.columns = hist.columns.get_level_values(0)
+                
+                if len(hist) >= 6:
+                    # 5営業日目の終値を取得
+                    exit_price = float(hist["Close"].iloc[5])
+                    actual_return = (exit_price - entry_price) / entry_price
+                    
+                    df_log.loc[idx, "ActualReturn5d"] = round(actual_return, 4)
+                    # 実際のパフォーマンスがプラスならWin、マイナスならLose
+                    df_log.loc[idx, "Status"] = "Win" if actual_return > 0 else "Lose"
+                elif (today_dt - entry_dt).days >= 14:
+                    # データが取れない等の例外で2週間以上経過している場合はClosed扱いに
+                    df_log.loc[idx, "Status"] = "Closed"
+
+    # 2. 本日の新規データを追加（条件A: Probability_TOP5 ＆ 条件B: Return_TOP5_Prob60）
+    new_logs = []
+    
+    # 条件Aの追加
+    for _, row in top5_prob.reset_index(drop=True).iterrows():
+        new_logs.append({
+            "Date": today_str,
+            "Ticker": row["ticker"],
+            "Name": row["name"],
+            "Condition": "Probability_TOP5",
+            "EntryPrice": row["current_price"],
+            "TargetReturn5d": round(row["predicted_return"], 4),
+            "ActualReturn5d": "",
+            "Status": "Open"
+        })
+
+    # 条件Bの追加（重複を避けるため、すでに条件Aに入っていないか確認しつつ追加も可能ですが、そのまま素直に記録します）
+    for _, row in top5_return.reset_index(drop=True).iterrows():
+        new_logs.append({
+            "Date": today_str,
+            "Ticker": row["ticker"],
+            "Name": row["name"],
+            "Condition": "Return_TOP5_Prob60",
+            "EntryPrice": row["current_price"],
+            "TargetReturn5d": round(row["predicted_return"], 4),
+            "ActualReturn5d": "",
+            "Status": "Open"
+        })
+
+    df_new = pd.DataFrame(new_logs)
+
+    # 同日のデータが既に存在する場合は重複追加しないように整理
+    df_log = df_log[df_log["Date"] != today_str]
+    df_combined = pd.concat([df_log, df_new], ignore_index=True)
+    
+    df_combined.to_csv(log_file, index=False)
+    print("forward_test_log.csv の勝敗判定と本日の結果追加を完了しました！")
+
 def run_screening():
     print("日経平均データ取得中...")
     market_df = yf.download("^N225", start="2020-01-01", auto_adjust=True, progress=False)
@@ -256,39 +336,8 @@ def run_screening():
         df_filtered = df_res.copy()
     top5_return = df_filtered.sort_values(by="predicted_return", ascending=False).head(5)
 
-    # --- 【追加】フォワードテスト用CSVへのログ保存処理 ---
-    log_file = "forward_test_log.csv"
-    today_str = datetime.now().strftime("%Y-%m-%d")
-    
-    new_logs = []
-    # TOP5に入った銘柄などをまとめてCSVに記録（ここでは例として確率上位TOP5を記録します）
-    for _, row in top5_prob.reset_index(drop=True).iterrows():
-        new_logs.append({
-            "Date": today_str,
-            "Ticker": row["ticker"],
-            "Name": row["name"],
-            "Condition": "Probability_TOP5",
-            "EntryPrice": row["current_price"],
-            "TargetReturn5d": row["predicted_return"],
-            "ActualReturn5d": "", # 後日集計用
-            "Status": "Open"
-        })
-
-    df_new = pd.DataFrame(new_logs)
-
-    if os.path.exists(log_file):
-        try:
-            df_existing = pd.read_csv(log_file)
-            # 同じ日付のデータがすでにあれば重複を防ぐために除外する
-            df_existing = df_existing[df_existing["Date"] != today_str]
-            df_combined = pd.concat([df_existing, df_new], ignore_index=True)
-        except Exception:
-            df_combined = df_new
-    else:
-        df_combined = df_new
-
-    df_combined.to_csv(log_file, index=False)
-    print("forward_test_log.csv に最新の予測結果を保存しました！")
+    # ログの更新とCSV保存処理の実行
+    update_and_append_log(top5_prob, top5_return)
 
     # メッセージの組み立て
     msg = "【📈 AI株価予測 朝のスクリーニング結果（200銘柄）】\n\n"

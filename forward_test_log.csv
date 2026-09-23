@@ -1,0 +1,2 @@
+Date,Ticker,Name,Condition,EntryPrice,TargetReturn5d,ActualReturn5d,Status
+2026-09-22,9999.T,テスト銘柄,Condition_A_Probability,1000.0,0.05,,検証中

@@ -1,2 +1,1 @@
-Date,Ticker,Name,Condition,EntryPrice,TargetReturn5d,ActualReturn5d,Status
-
+Date,Ticker,Name,Condition,EntryPrice,TargetReturn5d,ActualReturn5d,ExitPrice,ProfitYen,Status

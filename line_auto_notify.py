@@ -39,9 +39,9 @@ top200_tickers = {
     "3101.T": "東洋紡", "3103.T": "ユニチカ", "3401.T": "帝人", "3405.T": "クラレ", "3861.T": "王子ホールディングス",
     "3863.T": "日本製紙", "4005.T": "住友化学", "4042.T": "東ソー", "4208.T": "UBE", "4272.T": "日本化薬",
     "4503.T": "アステラス製薬", "4507.T": "塩野義製薬", "4523.T": "エーザイ", "4911.T": "資生堂", "5019.T": "出光興産",
-    "5108.T": "ブリヂストン", "5191.T": "住友ゴム工業", "5301.T": "東海カーボン", "5333.T": "日本碍子", "5411.T": "JFEホールディングス",
+    "5108.T": "ブリヂストン", "5301.T": "東海カーボン", "5333.T": "日本碍子", "5411.T": "JFEホールディングス",
     "5406.T": "神戸製鋼所", "5631.T": "日本製鋼所", "5706.T": "三井金属鉱業", "5801.T": "古河電気工業", "6103.T": "オークマ",
-    "6113.T": "アマダ", "6201.T": "豊田自動織機", "6305.T": "日立建機", "6361.T": "荏原製作所", "6471.T": "日本精工",
+    "6113.T": "アマダ", "6305.T": "日立建機", "6361.T": "荏原製作所", "6471.T": "日本精工",
     "6473.T": "ジェイテクト", "6479.T": "ミネベアミツミ", "6504.T": "富士電機", "6506.T": "安川電機", "6752.T": "パナソニック ホールディングス",
     "6753.T": "シャープ", "6770.T": "アルプスアルパイン", "6841.T": "横河電機", "6952.T": "カシオ計算機", "7013.T": "IHI",
     "7182.T": "ゆうちょ銀行", "7186.T": "コンコルディア", "7201.T": "日産自動車", "7211.T": "三菱自動車工業", "7270.T": "SUBARU",
@@ -223,9 +223,9 @@ def update_and_append_log(top5_prob, top5_return):
     today_str = datetime.now().strftime("%Y-%m-%d")
     today_dt = datetime.strptime(today_str, "%Y-%m-%d")
 
-    expected_columns = ["Date", "Ticker", "Name", "Condition", "EntryPrice", "TargetReturn5d", "ActualReturn5d", "Status"]
+    # 新しい列構成: 決済価格(ExitPrice)と獲得損益額(ProfitYen)を追加
+    expected_columns = ["Date", "Ticker", "Name", "Condition", "EntryPrice", "TargetReturn5d", "ActualReturn5d", "ExitPrice", "ProfitYen", "Status"]
 
-    # 1. 既存ログの読み込みと勝敗判定（Openのものをチェック）
     if os.path.exists(log_file):
         try:
             df_log = pd.read_csv(log_file)
@@ -237,17 +237,15 @@ def update_and_append_log(top5_prob, top5_return):
     else:
         df_log = pd.DataFrame(columns=expected_columns)
 
-    print(f"--- 既存ログの勝敗判定チェック開始 (全 {len(df_log)} 行) ---")
+    print(f"--- 既存ログの勝敗＆損益判定チェック開始 (全 {len(df_log)} 行) ---")
     
-    # ステータスがOpenの行について、5営業日以上経過していれば実績株価を取得して判定
+    # ステータスがOpenの行について勝敗＆損益判定
     for idx, row in df_log.iterrows():
         if str(row["Status"]) == "Open":
             entry_date_str = str(row["Date"])
-            print(f"チェック対象: Ticker={row['Ticker']}, Date={entry_date_str}")
             try:
                 entry_dt = datetime.strptime(entry_date_str, "%Y-%m-%d")
                 days_passed = (today_dt - entry_dt).days
-                print(f" -> 経過日数: {days_passed}日")
 
                 if days_passed >= 7:
                     ticker = row["Ticker"]
@@ -257,25 +255,27 @@ def update_and_append_log(top5_prob, top5_return):
                     if isinstance(hist.columns, pd.MultiIndex):
                         hist.columns = hist.columns.get_level_values(0)
                     
-                    print(f" -> 取得できた株価データ数: {len(hist)} 行")
-                    # 変更前：if len(hist) >= 6:
-                    # 変更後：
                     if len(hist) >= 5:
                         exit_page_idx = 4 if len(hist) == 5 else 5
                         exit_price = float(hist["Close"].iloc[exit_page_idx])
                         actual_return = (exit_price - entry_price) / entry_price
                         
+                        # 100株あたりの損益額を計算（円単位・小数点四捨五入）
+                        profit_yen = round((exit_price - entry_price) * 100)
+                        
                         df_log.loc[idx, "ActualReturn5d"] = round(actual_return, 4)
+                        df_log.loc[idx, "ExitPrice"] = round(exit_price, 1)
+                        df_log.loc[idx, "ProfitYen"] = profit_yen
                         df_log.loc[idx, "Status"] = "Win" if actual_return > 0 else "Lose"
-                        print(f" ==> 判定完了！ Status: {df_log.loc[idx, 'Status']} (ActualReturn: {actual_return:.4f})")
+                        print(f" ==> 判定完了 [{ticker}]: Status={df_log.loc[idx, 'Status']}, 損益={profit_yen:+,}円")
                     else:
-                        print(" ==> 5営業日分のデータがまだ揃っていません。")
+                        print(f" ==> [{ticker}] 5営業日分のデータがまだ揃っていません。")
                 else:
-                    print(" ==> 経過日数が7日未満のためスキップします。")
+                    pass # 7日未満はスキップ
             except Exception as e:
-                print(f" ==> エラー発生: {e}")
+                print(f" ==> エラー発生 [{row['Ticker']}]: {e}")
 
-    # 2. 本日の新規データを追加
+    # 本日の新規データを追加
     new_logs = []
     for _, row in top5_prob.reset_index(drop=True).iterrows():
         new_logs.append({
@@ -286,6 +286,8 @@ def update_and_append_log(top5_prob, top5_return):
             "EntryPrice": row["current_price"],
             "TargetReturn5d": round(row["predicted_return"], 4),
             "ActualReturn5d": "",
+            "ExitPrice": "",
+            "ProfitYen": "",
             "Status": "Open"
         })
 
@@ -298,6 +300,8 @@ def update_and_append_log(top5_prob, top5_return):
             "EntryPrice": row["current_price"],
             "TargetReturn5d": round(row["predicted_return"], 4),
             "ActualReturn5d": "",
+            "ExitPrice": "",
+            "ProfitYen": "",
             "Status": "Open"
         })
 
@@ -306,41 +310,25 @@ def update_and_append_log(top5_prob, top5_return):
     df_combined = pd.concat([df_log, df_new], ignore_index=True)
     
     df_combined.to_csv(log_file, index=False)
-    print("forward_test_log.csv の保存が完了しました！")
-    # 条件Aの追加
-    for _, row in top5_prob.reset_index(drop=True).iterrows():
-        new_logs.append({
-            "Date": today_str,
-            "Ticker": row["ticker"],
-            "Name": row["name"],
-            "Condition": "Probability_TOP5",
-            "EntryPrice": row["current_price"],
-            "TargetReturn5d": round(row["predicted_return"], 4),
-            "ActualReturn5d": "",
-            "Status": "Open"
-        })
+    print("forward_test_log.csv の保存（損益記録込み）が完了しました！")
 
-    # 条件Bの追加（重複を避けるため、すでに条件Aに入っていないか確認しつつ追加も可能ですが、そのまま素直に記録します）
-    for _, row in top5_return.reset_index(drop=True).iterrows():
-        new_logs.append({
-            "Date": today_str,
-            "Ticker": row["ticker"],
-            "Name": row["name"],
-            "Condition": "Return_TOP5_Prob60",
-            "EntryPrice": row["current_price"],
-            "TargetReturn5d": round(row["predicted_return"], 4),
-            "ActualReturn5d": "",
-            "Status": "Open"
-        })
-
-    df_new = pd.DataFrame(new_logs)
-
-    # 同日のデータが既に存在する場合は重複追加しないように整理
-    df_log = df_log[df_log["Date"] != today_str]
-    df_combined = pd.concat([df_log, df_new], ignore_index=True)
-    
-    df_combined.to_csv(log_file, index=False)
-    print("forward_test_log.csv の勝敗判定と本日の結果追加を完了しました！")
+    # --- 条件別トータル損益の集計 ---
+    print("\n================================")
+    print("【フォワードテスト 成績サマリー（100株換算）】")
+    for cond in ["Probability_TOP5", "Return_TOP5_Prob60"]:
+        cond_df = df_combined[df_combined["Condition"] == cond]
+        closed_df = cond_df[cond_df["Status"].isin(["Win", "Lose"])]
+        if not closed_df.empty:
+            total_profit = pd.to_numeric(closed_df["ProfitYen"]).sum()
+            wins = len(closed_df[closed_df["Status"] == "Win"])
+            total_trades = len(closed_df)
+            win_rate = (wins / total_trades) * 100
+            print(f"■ {cond}")
+            print(f"・確定トレード数: {total_trades} 回 (勝率: {win_rate:.1f}%)")
+            print(f"・累計損益: {total_profit:+,.0f} 円")
+        else:
+            print(f"■ {cond}\n・確定トレード数: 0 回 (集計中)")
+    print("================================\n")
 
 def run_screening():
     print("日経平均データ取得中...")
@@ -371,19 +359,15 @@ def run_screening():
 
     df_res = pd.DataFrame(results)
 
-    # ランキング1: 単純に上昇確率が高い順 TOP5
     top5_prob = df_res.sort_values(by="probability", ascending=False).head(5)
 
-    # ランキング2: 上昇確率60%以上の中で、予測上昇幅が大きい順 TOP5
     df_filtered = df_res[df_res["probability"] >= 0.60].copy()
     if df_filtered.empty:
         df_filtered = df_res.copy()
     top5_return = df_filtered.sort_values(by="predicted_return", ascending=False).head(5)
 
-    # ログの更新とCSV保存処理の実行
     update_and_append_log(top5_prob, top5_return)
 
-    # メッセージの組み立て
     msg = "【📈 AI株価予測 朝のスクリーニング結果（200銘柄）】\n\n"
 
     msg += "【🎯 上昇確率が高い順 TOP5】\n"

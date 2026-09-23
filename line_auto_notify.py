@@ -4,6 +4,7 @@ import pandas as pd
 import numpy as np
 import yfinance as yf
 import lightgbm as lgb
+from datetime import datetime
 
 # --- 設定値（GitHubのSecretsから環境変数として安全に読み込みます） ---
 LINE_ACCESS_TOKEN = os.getenv("LINE_ACCESS_TOKEN")
@@ -254,6 +255,40 @@ def run_screening():
     if df_filtered.empty:
         df_filtered = df_res.copy()
     top5_return = df_filtered.sort_values(by="predicted_return", ascending=False).head(5)
+
+    # --- 【追加】フォワードテスト用CSVへのログ保存処理 ---
+    log_file = "forward_test_log.csv"
+    today_str = datetime.now().strftime("%Y-%m-%d")
+    
+    new_logs = []
+    # TOP5に入った銘柄などをまとめてCSVに記録（ここでは例として確率上位TOP5を記録します）
+    for _, row in top5_prob.reset_index(drop=True).iterrows():
+        new_logs.append({
+            "Date": today_str,
+            "Ticker": row["ticker"],
+            "Name": row["name"],
+            "Condition": "Probability_TOP5",
+            "EntryPrice": row["current_price"],
+            "TargetReturn5d": row["predicted_return"],
+            "ActualReturn5d": "", # 後日集計用
+            "Status": "Open"
+        })
+
+    df_new = pd.DataFrame(new_logs)
+
+    if os.path.exists(log_file):
+        try:
+            df_existing = pd.read_csv(log_file)
+            # 同じ日付のデータがすでにあれば重複を防ぐために除外する
+            df_existing = df_existing[df_existing["Date"] != today_str]
+            df_combined = pd.concat([df_existing, df_new], ignore_index=True)
+        except Exception:
+            df_combined = df_new
+    else:
+        df_combined = df_new
+
+    df_combined.to_csv(log_file, index=False)
+    print("forward_test_log.csv に最新の予測結果を保存しました！")
 
     # メッセージの組み立て
     msg = "【📈 AI株価予測 朝のスクリーニング結果（200銘柄）】\n\n"

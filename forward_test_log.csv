@@ -9,3 +9,13 @@ Date,Ticker,Name,Condition,EntryPrice,TargetReturn5d,ActualReturn5d,ExitPrice,Pr
 2026-09-23,8411.T,みずほフィナンシャルグループ,Return_TOP5_Prob60,8495.0,0.0373,,,,Open
 2026-09-23,6952.T,カシオ計算機,Return_TOP5_Prob60,2141.0,0.0366,,,,Open
 2026-09-23,2914.T,日本たばこ産業 (JT),Return_TOP5_Prob60,6886.0,0.0355,,,,Open
+2026-09-24,3038.T,神戸物産,Probability_TOP5,3037.0,0.0272,,,,Open
+2026-09-24,8803.T,平和不動産,Probability_TOP5,2380.0,0.0117,,,,Open
+2026-09-24,1332.T,日本水産 (ニッスイ),Probability_TOP5,1163.0,0.0304,,,,Open
+2026-09-24,8306.T,三菱UFJフィナンシャル・グループ,Probability_TOP5,3620.0,0.0341,,,,Open
+2026-09-24,9502.T,中部電力,Probability_TOP5,2913.0,0.0315,,,,Open
+2026-09-24,6361.T,荏原製作所,Return_TOP5_Prob60,4323.0,0.0516,,,,Open
+2026-09-24,4689.T,LINEヤフー,Return_TOP5_Prob60,536.7999877929688,0.04,,,,Open
+2026-09-24,8411.T,みずほフィナンシャルグループ,Return_TOP5_Prob60,8495.0,0.0373,,,,Open
+2026-09-24,6952.T,カシオ計算機,Return_TOP5_Prob60,2141.0,0.0366,,,,Open
+2026-09-24,2914.T,日本たばこ産業 (JT),Return_TOP5_Prob60,6886.0,0.0355,,,,Open

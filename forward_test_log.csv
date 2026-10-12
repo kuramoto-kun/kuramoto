@@ -9,3 +9,13 @@ Date,Ticker,Name,Condition,EntryPrice,TargetReturn5d,ActualReturn5d,ExitPrice,Pr
 2026-10-11,5706.T,三井金属鉱業,Return_TOP5_Prob60,2659.0,0.0594,,,,Open
 2026-10-11,6146.T,ディスコ,Return_TOP5_Prob60,61460.0,0.0568,,,,Open
 2026-10-11,7013.T,IHI,Return_TOP5_Prob60,2625.5,0.0561,,,,Open
+2026-10-12,5706.T,三井金属鉱業,Probability_TOP5,2659.0,0.0668,,,,Open
+2026-10-12,8591.T,オリックス,Probability_TOP5,5770.0,0.0152,,,,Open
+2026-10-12,8331.T,千葉銀行,Probability_TOP5,2668.0,0.0305,,,,Open
+2026-10-12,5802.T,住友電気工業,Probability_TOP5,2360.5,0.0485,,,,Open
+2026-10-12,8354.T,静岡フィナンシャルグループ,Probability_TOP5,7453.0,0.0281,,,,Open
+2026-10-12,5801.T,古河電気工業,Return_TOP5_Prob60,4096.0,0.1701,,,,Open
+2026-10-12,5706.T,三井金属鉱業,Return_TOP5_Prob60,2659.0,0.0668,,,,Open
+2026-10-12,6146.T,ディスコ,Return_TOP5_Prob60,61460.0,0.0568,,,,Open
+2026-10-12,6952.T,カシオ計算機,Return_TOP5_Prob60,2227.0,0.0564,,,,Open
+2026-10-12,7013.T,IHI,Return_TOP5_Prob60,2625.5,0.0561,,,,Open

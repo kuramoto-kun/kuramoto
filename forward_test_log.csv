@@ -39,3 +39,13 @@ Date,Ticker,Name,Condition,EntryPrice,TargetReturn5d,ActualReturn5d,ExitPrice,Pr
 2026-10-14,6981.T,村田製作所,Return_TOP5_Prob60,7582.0,0.0618,,,,Open
 2026-10-14,6146.T,ディスコ,Return_TOP5_Prob60,58580.0,0.0617,,,,Open
 2026-10-14,1801.T,大成建設,Return_TOP5_Prob60,11615.0,0.0604,,,,Open
+2026-10-15,3863.T,日本製紙,Probability_TOP5,1229.0,0.0088,,,,Open
+2026-10-15,2282.T,日本ハム,Probability_TOP5,2041.0,0.0141,,,,Open
+2026-10-15,6770.T,アルプスアルパイン,Probability_TOP5,2155.5,0.0124,,,,Open
+2026-10-15,7186.T,コンコルディア,Probability_TOP5,1778.0,0.0288,,,,Open
+2026-10-15,7182.T,ゆうちょ銀行,Probability_TOP5,3093.0,0.0374,,,,Open
+2026-10-15,5801.T,古河電気工業,Return_TOP5_Prob60,3885.0,0.1791,,,,Open
+2026-10-15,6146.T,ディスコ,Return_TOP5_Prob60,58100.0,0.0711,,,,Open
+2026-10-15,5706.T,三井金属鉱業,Return_TOP5_Prob60,2602.0,0.0671,,,,Open
+2026-10-15,8750.T,第一生命ホールディングス,Return_TOP5_Prob60,1812.0,0.0565,,,,Open
+2026-10-15,6506.T,安川電機,Return_TOP5_Prob60,4712.0,0.0549,,,,Open

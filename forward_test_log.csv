@@ -129,3 +129,13 @@ Date,Ticker,Name,Condition,EntryPrice,TargetReturn5d,ActualReturn5d,ExitPrice,Pr
 2026-10-28,8604.T,野村ホールディングス,Return_TOP5_Prob60,1433.5,0.0505,,,,Open
 2026-10-28,5706.T,三井金属鉱業,Return_TOP5_Prob60,2143.0,0.0474,,,,Open
 2026-10-28,7203.T,トヨタ自動車,Return_TOP5_Prob60,3090.0,0.0462,,,,Open
+2026-10-29,2503.T,キリンホールディングス,Probability_TOP5,2827.5,0.0405,,,,Open
+2026-10-29,7011.T,三菱重工業,Probability_TOP5,3457.0,0.0514,,,,Open
+2026-10-29,8306.T,三菱UFJフィナンシャル・グループ,Probability_TOP5,3421.0,0.0251,,,,Open
+2026-10-29,8572.T,アコム,Probability_TOP5,436.20001220703125,0.0366,,,,Open
+2026-10-29,9433.T,KDDI,Probability_TOP5,2777.0,0.0209,,,,Open
+2026-10-29,3099.T,三越伊勢丹ホールディングス,Return_TOP5_Prob60,1762.0,0.0548,,,,Open
+2026-10-29,7011.T,三菱重工業,Return_TOP5_Prob60,3457.0,0.0514,,,,Open
+2026-10-29,8604.T,野村ホールディングス,Return_TOP5_Prob60,1454.5,0.0507,,,,Open
+2026-10-29,2503.T,キリンホールディングス,Return_TOP5_Prob60,2827.5,0.0405,,,,Open
+2026-10-29,7203.T,トヨタ自動車,Return_TOP5_Prob60,3082.0,0.0403,,,,Open
